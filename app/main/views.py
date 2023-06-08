@@ -1,7 +1,6 @@
 from datetime import datetime
 from flask import render_template, session, redirect, url_for, current_app
 
-import app
 from . import main
 from .forms import NameForm
 from .. import db
@@ -43,3 +42,8 @@ def email():
     app = current_app._get_current_object()
     send_email(app.config["MAIL_RECEIVER"], "Test", "main/email/test")
     return "email_test sent"
+
+
+@main.route("/smoke", methods=["GET"])
+def smoke():
+    return {"message": "smoke"}, 200
