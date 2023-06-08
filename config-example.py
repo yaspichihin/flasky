@@ -20,6 +20,7 @@ class DevelopmentConfig(Config):
 
     MAIL_SUBJECT_PREFIX = "[FLASKY]-"
     MAIL_SENDER = "FLASKY Admin <...@yandex.ru>"
+    MAIL_RECEIVER = "...@yandex.ru"
     MAIL_SERVER = "smtp.yandex.ru"
     MAIL_PORT = 465
     MAIL_USE_TLS = False
