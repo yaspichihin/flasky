@@ -1,11 +1,13 @@
 from datetime import datetime
 from flask import render_template, session, redirect, url_for, current_app
+from flask_login import login_required
 
 from . import main
 from .forms import NameForm
 from .. import db
 from ..email import send_email
-from ..models import User
+from ..models import User, Role, Permission
+from app.decorators import admin_required, permission_required
 
 
 # Маршруты и представления
@@ -37,13 +39,28 @@ def index():
     )
 
 
-@main.route("/email_test", methods=["GET", "POST"])
-def email():
-    app = current_app._get_current_object()
-    send_email(app.config["MAIL_RECEIVER"], "Test", "main/email/test")
-    return "email_test sent"
-
-
 @main.route("/smoke", methods=["GET"])
 def smoke():
+    return {"message": "smoke"}, 200
+
+
+# Маршрут только для администраторов
+@main.route("/admin", methods=["GET"])
+@login_required
+@admin_required
+def for_admins_only():
+    return "Route only for administrators"
+
+
+# Маршрут только для администраторов и модераторов
+@main.route("/moderator", methods=["GET"])
+@login_required
+@permission_required(Permission.MODERATE)
+def for_admins_and_moderators_only():
+    return "Route only for moderators"
+
+
+@main.route("/data", methods=["GET"])
+def data():
+    Role.insert_roles()
     return {"message": "smoke"}, 200

@@ -8,6 +8,7 @@ BASE_DIR = Path(__file__).parent
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY") or "secured_key"
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
+    FLASKY_ADMIN = "...@yandex.ru"
 
     @staticmethod
     def init_app(app):

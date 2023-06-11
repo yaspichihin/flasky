@@ -2,27 +2,27 @@ import pytest
 import time
 
 from app import create_app, db
-from app.models import User
+from app.models import User, Role, AnonymousUser, Permission
 
 
-def test_password_setter():
+def test_password_setter(prepare_app_context):
     user = User(password="cat")
     assert user.password_hash is not None
 
 
-def test_no_password_getter():
+def test_no_password_getter(prepare_app_context):
     user = User(password="cat")
     with pytest.raises(AttributeError):
         user.password
 
 
-def test_password_verification():
+def test_password_verification(prepare_app_context):
     user = User(password="cat")
     assert user.verify_password("cat")
     assert not user.verify_password("dog")
 
 
-def test_password_salts_are_random():
+def test_password_salts_are_random(prepare_app_context):
     user1 = User(password="cat")
     user2 = User(password="dog")
     assert user1.password_hash != user2.password_hash
@@ -93,3 +93,41 @@ def test_duplicate_email_change_token(prepare_app_context):
     token = user2.generate_email_change_token('john@example.com')
     assert not user2.change_email(token)
     assert user2.email == 'susan@example.org'
+
+
+def test_user_role(prepare_app_context):
+    user = User(email='john@example.com', password='cat')
+    assert user.can(Permission.FOLLOW)
+    assert user.can(Permission.COMMENT)
+    assert user.can(Permission.WRITE)
+    assert user.can(Permission.MODERATE)
+    assert user.can(Permission.ADMIN)
+
+
+def test_moderator_role(prepare_app_context):
+    role = Role.query.filter_by(name='Moderator').first()
+    user = User(email='john@example.com', password='cat', role=role)
+    assert user.can(Permission.FOLLOW)
+    assert user.can(Permission.COMMENT)
+    assert user.can(Permission.WRITE)
+    assert user.can(Permission.MODERATE)
+    assert not user.can(Permission.ADMIN)
+
+
+def test_administrator_role(prepare_app_context):
+    role = Role.query.filter_by(name='Administrator').first()
+    user = User(email='john@example.com', password='cat', role=role)
+    assert user.can(Permission.FOLLOW)
+    assert user.can(Permission.COMMENT)
+    assert user.can(Permission.WRITE)
+    assert user.can(Permission.MODERATE)
+    assert user.can(Permission.ADMIN)
+
+
+def test_anonymous_user(prepare_app_context):
+    user = AnonymousUser()
+    assert not user.can(Permission.FOLLOW)
+    assert not user.can(Permission.COMMENT)
+    assert not user.can(Permission.WRITE)
+    assert not user.can(Permission.MODERATE)
+    assert not user.can(Permission.ADMIN)
