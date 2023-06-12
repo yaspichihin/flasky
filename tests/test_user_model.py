@@ -1,3 +1,4 @@
+from datetime import datetime
 import pytest
 import time
 
@@ -100,8 +101,8 @@ def test_user_role(prepare_app_context):
     assert user.can(Permission.FOLLOW)
     assert user.can(Permission.COMMENT)
     assert user.can(Permission.WRITE)
-    assert user.can(Permission.MODERATE)
-    assert user.can(Permission.ADMIN)
+    assert not user.can(Permission.MODERATE)
+    assert not user.can(Permission.ADMIN)
 
 
 def test_moderator_role(prepare_app_context):
@@ -131,3 +132,26 @@ def test_anonymous_user(prepare_app_context):
     assert not user.can(Permission.WRITE)
     assert not user.can(Permission.MODERATE)
     assert not user.can(Permission.ADMIN)
+
+
+def test_timestamps(prepare_app_context):
+    user = User(password='cat')
+    db.session.add(user)
+    db.session.commit()
+    assert (datetime.utcnow() - user.member_since).total_seconds() < 60
+    assert (datetime.utcnow() - user.last_seen).total_seconds() < 60
+
+
+def test_ping(prepare_app_context):
+    user = User(password='cat')
+    db.session.add(user)
+    db.session.commit()
+    time.sleep(2)
+    last_seen_before = user.last_seen
+    user.ping()
+    assert user.last_seen > last_seen_before
+
+
+def test_gravatar(prepare_app_context):
+    user = User(email='john@example.com', password='cat')
+    assert 'https://secure.gravatar.com/avatar/d4c74594d841139328695756648b6bd6' in user.gravatar()
