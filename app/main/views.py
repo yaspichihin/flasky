@@ -1,42 +1,30 @@
 from datetime import datetime
-from flask import render_template, session, redirect, url_for, current_app, flash
+from flask import render_template, session, redirect, url_for, current_app, flash, request
 from flask_login import login_required, current_user
 
 from . import main
-from .forms import NameForm, EditProfileForm, EditProfileAdminForm
+from .forms import NameForm, EditProfileForm, EditProfileAdminForm, PostForm
 from .. import db
 from ..email import send_email
-from ..models import User, Role, Permission
+from ..models import User, Role, Permission, Post
 from app.decorators import admin_required, permission_required
 
 
 # Маршруты и представления
 @main.route("/", methods=["GET", "POST"])
 def index():
-    form = NameForm()
-    if form.validate_on_submit():
-        user: User = User.query.filter_by(username=form.name.data).first()
-        if not user:
-            user: User = User(username=form.name.data)
-            db.session.add(user)
-            session["known"] = False
-            # Отправка почты при новом пользователе в поле
-            app = current_app._get_current_object()
-            if app.config["MAIL_SENDER"]:
-                send_email(
-                    app.config["MAIL_RECEIVER"], "New User",
-                    "main/email/new_user",  user=user
-                )
-        else:
-            session["known"] = True
-        session["name"] = form.name.data
-        # Очистка формы
-        form.name.data = ""
+    form = PostForm()
+    if current_user.can(Permission.WRITE) and form.validate_on_submit():
+        post = Post(body=form.body.data, author=current_user._get_current_object())
+        db.session.add(post)
+        db.session.commit()
         return redirect(url_for(".index"))
-    return render_template(
-        "main/index.html", name=session.get("name"), form=form,
-        current_time=datetime.utcnow(), known=session.get("known", False),
-    )
+    page = request.args.get('page', 1, type=int)
+    pagination = Post.query.order_by(Post.timestamp.desc()).paginate(
+        page=page, per_page=current_app.config['FLASKY_POSTS_PER_PAGE'],
+        error_out=False)
+    posts = pagination.items
+    return render_template("main/index.html", form=form, posts=posts, pagination=pagination)
 
 
 @main.route("/smoke", methods=["GET"])
@@ -69,7 +57,12 @@ def data():
 @main.route("/user/<username>", methods=["GET"])
 def user_profile(username):
     user = User.query.filter_by(username=username).first_or_404()
-    return render_template("main/user.html", user=user)
+    page = request.args.get("page", 1, type=int)
+    pagination = user.posts.order_by(Post.timestamp.desc()).paginate(
+        page=page, per_page=current_app.config["FLASKY_POSTS_PER_PAGE"],
+        error_out=False)
+    posts = pagination.items
+    return render_template("main/user.html", user=user, posts=posts, pagination=pagination)
 
 
 @main.route("/edit-profile", methods=["GET", "POST"])
