@@ -9,5 +9,5 @@ migrate = Migrate(app, db)
 
 
 if __name__ == "__main__":
-    run_simple("localhost", 8000, app, use_reloader=True)
+    run_simple("0.0.0.0", 8000, app, use_reloader=True)
 

@@ -1,11 +1,11 @@
 from datetime import datetime
-from flask import render_template, session, redirect, url_for, current_app, flash, request
+from flask import render_template, session, redirect, url_for, current_app, flash, request, abort
 from flask_login import login_required, current_user
 
 from . import main
 from .forms import NameForm, EditProfileForm, EditProfileAdminForm, PostForm
 from .. import db
-from ..email import send_email
+from ..emails import send_email
 from ..models import User, Role, Permission, Post
 from app.decorators import admin_required, permission_required
 
@@ -110,3 +110,26 @@ def edit_profile_admin(id):
     form.location.data = user.location
     form.about_me.data = user.about_me
     return render_template('main/edit_profile.html', form=form, user=user)
+
+
+@main.route('/post/<int:post_id>')
+def get_post(post_id: int):
+    post: Post = Post.query.get_or_404(post_id)
+    return render_template('main/post.html', posts=[post])
+
+
+@main.route('/edit/<int:post_id>', methods=['GET', 'POST'])
+@login_required
+def edit_post(post_id):
+    post = Post.query.get_or_404(post_id)
+    if current_user != post.author and not current_user.can(Permission.ADMIN):
+        abort(403)
+    form = PostForm()
+    if form.validate_on_submit():
+        post.body = form.body.data
+        db.session.add(post)
+        db.session.commit()
+        flash('The post has been updated.')
+        return redirect(url_for('main.get_post', post_id=post.id))
+    form.body.data = post.body
+    return render_template('main/edit_post.html', form=form)

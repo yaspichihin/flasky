@@ -1,14 +1,14 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, TextAreaField, BooleanField, SelectField
 from wtforms.validators import DataRequired, Length, Email, Regexp, ValidationError
-# from flask_pagedown.fields import PageDownField
+from flask_pagedown.fields import PageDownField
 
 from app.models import Role, User
 
 
 # Форма для ввода имени
 class NameForm(FlaskForm):
-    name = StringField("What is your name?", validators=[DataRequired()])
+    name = PageDownField("What is your name?", validators=[DataRequired()])
     submit = SubmitField("Submit")
 
 
